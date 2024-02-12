@@ -1,0 +1,541 @@
+Based on the data we were given, below are the questions we wanted to address.
+
+1.What's the net profit of each customer?
+
+2.What's the order count of each city?
+
+3.What's the profit earned from each city?
+
+4.What's the profit from each source?
+
+5.Number of orders placed on each day?
+
+And improvise along the way
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
+from google.colab import drive
+drive.mount('/content/drive')
+Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount("/content/drive", force_remount=True).
+df1 = pd.read_excel('/content/drive/MyDrive/task1/Data.xlsx', sheet_name=[ 'Value Info'])
+df2 = pd.read_excel('/content/drive/MyDrive/task1/Data.xlsx', sheet_name=[ 'Demographic Info'])
+**EXPLORATORY DATA ANALYSI**S
+data_dict = pd.read_excel('/content/drive/MyDrive/task1/Data.xlsx', sheet_name=[ 'Value Info', 'Demographic Info'])
+df1 = data_dict['Value Info']
+df2 = data_dict['Demographic Info']
+df1.set_index('Customer ID', inplace=True)
+df2.set_index('Customer ID', inplace=True)
+df1.head()
+df2.head()
+Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer
+Customer ID						
+1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search
+2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates
+3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social
+4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates
+5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search
+df2['birth_year'] = df2['Date Of Birth'].dt.year
+df2.describe()
+birth_year
+count	31441.000000
+mean	1978.087879
+std	10.933127
+min	1916.000000
+25%	1972.000000
+50%	1981.000000
+75%	1986.000000
+max	1993.000000
+df2.isna().sum()
+Title                 4078
+Date Of Birth            0
+Address City             0
+Contact Allowed          0
+Registration Date        0
+Source of Customer       0
+birth_year               0
+dtype: int64
+df2['age'] = 2013 - df2['birth_year']
+df2.head()
+Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	birth_year	age
+Customer ID								
+1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	1973	40
+2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	1984	29
+3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	1991	22
+4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	1986	27
+5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	1991	22
+df2.Title.value_counts() / df2.Title.count() * 100
+Mr      73.021964
+Miss     9.911194
+Ms       8.551694
+Mrs      8.515148
+Name: Title, dtype: float64
+round(df2['Source of Customer'].value_counts() / df2['Source of Customer'].count() * 100, 2)
+Direct            35.79
+Organic Search    26.69
+Paid Search       20.73
+Affiliates        12.30
+Paid Social        4.49
+Name: Source of Customer, dtype: float64
+df2['Contact Allowed'].value_counts()
+Y    18142
+N    13299
+Name: Contact Allowed, dtype: int64
+df2.groupby('Contact Allowed')['Source of Customer'].value_counts()
+Contact Allowed  Source of Customer
+N                Direct                4714
+                 Organic Search        3576
+                 Paid Search           2844
+                 Affiliates            1568
+                 Paid Social            597
+Y                Direct                6538
+                 Organic Search        4816
+                 Paid Search           3674
+                 Affiliates            2300
+                 Paid Social            814
+Name: Source of Customer, dtype: int64
+df2['hour'] = df2['Registration Date'].dt.hour
+df2.describe()
+birth_year	age	hour
+count	31441.000000	31441.000000	31441.000000
+mean	1978.087879	34.912121	14.293788
+std	10.933127	10.933127	5.553165
+min	1916.000000	20.000000	0.000000
+25%	1972.000000	27.000000	12.000000
+50%	1981.000000	32.000000	14.000000
+75%	1986.000000	41.000000	19.000000
+max	1993.000000	97.000000	23.000000
+df2['hour'].value_counts().sort_index()
+0      783
+1      708
+2      470
+3      359
+4      237
+5      178
+6      210
+7      251
+8      530
+9      888
+10    1309
+11    1917
+12    2244
+13    2686
+14    2996
+15    2208
+16    2036
+17    1721
+18    1826
+19    2024
+20    1636
+21    1553
+22    1411
+23    1260
+Name: hour, dtype: int64
+NOTE:
+
+There are 4078 people who refuse their identity which could be an indication of either the user is not comfortable in addressing their gender as binary. This could be related to the form field in UI.
+
+People from 1972 and 1986 are the most present in the IQ1 and IQ3.
+
+Presence of an outlier in the date of births as the lowest birth year is 1916 which is unusual.
+
+Average age registration is ~35 years old. While the minimum age is 20 and maximum is 97 years old
+
+Male performs more registration compared to other categories with ~73% compared to others.
+
+High customer acquisition is made through direct or organic search with ~62.48% compared to paid campaigns.
+
+Most number of customers are from Dublin with 21753.
+
+Number of people who prefer to be contacted are significantly higher in direct or organic searches compared to other sources.
+
+Most of the registrations occurred between 12-19 pm with the highest registration count. It indicates highest traffic
+
+DATA PREPARATION
+df = pd.read_excel('/content/drive/MyDrive/task1/Data.xlsx', sheet_name=['Cost', 'Value Info','Demographic Info'])
+df['Cost']
+Month	Paid Search	Affiliates
+0	2013-01-01	41512.00	16421
+1	2013-02-01	61243.00	42101
+2	2013-03-01	84597.88	141321
+value_info = df['Value Info']
+value_info.shape
+(30591, 5)
+demo_info = df['Demographic Info']
+demo_info.shape
+(31441, 7)
+merged_df = pd.merge(demo_info, value_info, on='Customer ID', how='left')
+merged_df.columns
+Index(['Customer ID', 'Title', 'Date Of Birth', 'Address City',
+       'Contact Allowed', 'Registration Date', 'Source of Customer',
+       '1st Order Profit', 'Subsequent Order Profit',
+       'Subsequent Orders Count', 'Total value of all promotions'],
+      dtype='object')
+rows_to_clean = ['Customer ID','Date Of Birth', 'Address City',
+       'Contact Allowed', 'Registration Date', 'Source of Customer',
+       '1st Order Profit', 'Subsequent Order Profit',
+       'Subsequent Orders Count', 'Total value of all promotions']
+cleaned_df = merged_df.dropna(subset=rows_to_clean)
+cleaned_df
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	8.97261	5.307720	1.0	6.600000
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	7.92288	70.156800	7.0	6.639453
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.06160	50.803200	7.0	0.000000
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.07672	0.000000	0.0	0.000000
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	22.68000	68.221440	9.0	14.771948
+...	...	...	...	...	...	...	...	...	...	...	...
+31436	31437	Mr	1964-12-19	Dublin	N	2013-03-15 17:28:00	Affiliates	11.08800	97.396992	9.0	27.623670
+31437	31438	Mr	1977-09-23	Mullingar	Y	2013-03-15 17:28:00	Paid Search	20.73600	69.672960	10.0	8.870218
+31438	31439	Mr	1988-07-02	Dublin	Y	2013-03-15 17:28:00	Paid Social	6.89472	41.803776	4.0	0.000000
+31439	31440	Miss	1993-02-10	Dublin	Y	2013-03-15 17:29:00	Direct	8.98800	0.000000	0.0	2.519968
+31440	31441	Mr	1971-12-18	Letterkenny	Y	2013-03-15 17:30:00	Direct	2.59200	69.050880	6.0	9.196737
+30591 rows × 11 columns
+
+columns_to_round = ['1st Order Profit', 'Subsequent Order Profit',
+       'Subsequent Orders Count', 'Total value of all promotions']
+cleaned_df[columns_to_round] = cleaned_df[columns_to_round].round(0)
+cleaned_df
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	9.0	5.0	1.0	7.0
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	8.0	70.0	7.0	7.0
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.0	51.0	7.0	0.0
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.0	0.0	0.0	0.0
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	23.0	68.0	9.0	15.0
+...	...	...	...	...	...	...	...	...	...	...	...
+31436	31437	Mr	1964-12-19	Dublin	N	2013-03-15 17:28:00	Affiliates	11.0	97.0	9.0	28.0
+31437	31438	Mr	1977-09-23	Mullingar	Y	2013-03-15 17:28:00	Paid Search	21.0	70.0	10.0	9.0
+31438	31439	Mr	1988-07-02	Dublin	Y	2013-03-15 17:28:00	Paid Social	7.0	42.0	4.0	0.0
+31439	31440	Miss	1993-02-10	Dublin	Y	2013-03-15 17:29:00	Direct	9.0	0.0	0.0	3.0
+31440	31441	Mr	1971-12-18	Letterkenny	Y	2013-03-15 17:30:00	Direct	3.0	69.0	6.0	9.0
+30591 rows × 11 columns
+
+Number of order from each city
+location_counts = cleaned_df['Address City'].value_counts()
+plt.figure(figsize=(8, 6))
+location_counts.plot(kind='bar', color='skyblue')
+plt.xlabel('Store Location')
+plt.ylabel('Frequency')
+plt.title('Store Location Order Frequency')
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
+
+cleaned_df['Address City'].value_counts()
+Dublin         21160
+Cork            1048
+Galway           638
+Limerick         617
+Waterford        381
+Kilkenny         263
+Wexford          241
+Dundalk          241
+Mullingar        238
+Tallaght         232
+Carlow           229
+Lucan            224
+Navan            218
+Naas             207
+Bray             206
+Tralee           201
+Drogheda         200
+Swords           191
+Ennis            180
+Clonmel          176
+Clondalkin       150
+Athlone          149
+Sligo            148
+Letterkenny      148
+Enniscorthy      146
+Newbridge        143
+Dungarvan        139
+Portlaoise       130
+Longford         129
+Tullamore        123
+Mallow           122
+Ballina          119
+Blackrock        118
+Celbridge        117
+Ballinasloe      115
+Cavan            115
+Leixlip          111
+Nenagh           106
+Malahide         105
+Ashbourne        104
+Gorey            102
+Kildare          101
+Balbriggan       101
+Kells             99
+Rathfarnham       95
+Maynooth          95
+Killarney         94
+Athy              94
+Castlebar         92
+Greystones        90
+Name: Address City, dtype: int64
+cleaned_df['Title'].value_counts()
+Mr      19436
+Miss     2635
+Ms       2273
+Mrs      2272
+Name: Title, dtype: int64
+cleaned_df['Registration Date'].value_counts()
+2013-03-16 14:35:00    14
+2013-03-16 14:00:00    11
+2013-03-15 12:31:00    11
+2013-03-15 12:37:00    11
+2013-03-17 15:12:00    10
+                       ..
+2013-03-27 22:37:00     1
+2013-03-27 22:08:00     1
+2013-03-27 22:01:00     1
+2013-03-27 22:00:00     1
+2013-03-15 17:30:00     1
+Name: Registration Date, Length: 23665, dtype: int64
+ 
+cleaned_df['DayName'] = cleaned_df['Registration Date'].dt.day_name()
+cleaned_df
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	9.0	5.0	1.0	7.0	Tuesday
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	8.0	70.0	7.0	7.0	Tuesday
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.0	51.0	7.0	0.0	Tuesday
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.0	0.0	0.0	0.0	Tuesday
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	23.0	68.0	9.0	15.0	Tuesday
+...	...	...	...	...	...	...	...	...	...	...	...	...
+31436	31437	Mr	1964-12-19	Dublin	N	2013-03-15 17:28:00	Affiliates	11.0	97.0	9.0	28.0	Friday
+31437	31438	Mr	1977-09-23	Mullingar	Y	2013-03-15 17:28:00	Paid Search	21.0	70.0	10.0	9.0	Friday
+31438	31439	Mr	1988-07-02	Dublin	Y	2013-03-15 17:28:00	Paid Social	7.0	42.0	4.0	0.0	Friday
+31439	31440	Miss	1993-02-10	Dublin	Y	2013-03-15 17:29:00	Direct	9.0	0.0	0.0	3.0	Friday
+31440	31441	Mr	1971-12-18	Letterkenny	Y	2013-03-15 17:30:00	Direct	3.0	69.0	6.0	9.0	Friday
+30591 rows × 12 columns
+
+cleaned_df.sort_values(by='Registration Date', ascending=False)
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName
+24083	24084	Miss	1975-03-12	Clonmel	Y	2013-03-31 23:52:00	Organic Search	21.0	45.0	6.0	26.0	Sunday
+24082	24083	Mr	1959-03-18	Ballina	N	2013-03-31 23:39:00	Organic Search	23.0	60.0	5.0	5.0	Sunday
+24081	24082	Mr	1980-08-26	Dublin	N	2013-03-31 23:32:00	Organic Search	9.0	29.0	4.0	7.0	Sunday
+24080	24081	Mr	1973-08-27	Dublin	Y	2013-03-31 23:16:00	Organic Search	19.0	22.0	3.0	5.0	Sunday
+24079	24080	Mr	1971-04-13	Dublin	Y	2013-03-31 23:07:00	Affiliates	12.0	24.0	6.0	1.0	Sunday
+...	...	...	...	...	...	...	...	...	...	...	...	...
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	23.0	68.0	9.0	15.0	Tuesday
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.0	0.0	0.0	0.0	Tuesday
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.0	51.0	7.0	0.0	Tuesday
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	8.0	70.0	7.0	7.0	Tuesday
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	9.0	5.0	1.0	7.0	Tuesday
+30591 rows × 12 columns
+
+cleaned_df[cleaned_df['Registration Date'] > "2013-03-31 00:00:00"]
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName
+23991	23992	Mr	1964-03-16	Dublin	N	2013-03-31 00:31:00	Affiliates	10.0	0.0	0.0	2.0	Sunday
+23992	23993	NaN	1982-11-14	Galway	N	2013-03-31 00:33:00	Paid Social	4.0	57.0	5.0	0.0	Sunday
+23993	23994	Miss	1970-11-03	Dublin	Y	2013-03-31 00:41:00	Direct	14.0	129.0	11.0	60.0	Sunday
+23994	23995	NaN	1973-04-13	Newbridge	N	2013-03-31 00:46:00	Organic Search	17.0	11.0	1.0	6.0	Sunday
+23995	23996	NaN	1991-01-09	Dublin	Y	2013-03-31 00:51:00	Organic Search	3.0	11.0	1.0	0.0	Sunday
+...	...	...	...	...	...	...	...	...	...	...	...	...
+24079	24080	Mr	1971-04-13	Dublin	Y	2013-03-31 23:07:00	Affiliates	12.0	24.0	6.0	1.0	Sunday
+24080	24081	Mr	1973-08-27	Dublin	Y	2013-03-31 23:16:00	Organic Search	19.0	22.0	3.0	5.0	Sunday
+24081	24082	Mr	1980-08-26	Dublin	N	2013-03-31 23:32:00	Organic Search	9.0	29.0	4.0	7.0	Sunday
+24082	24083	Mr	1959-03-18	Ballina	N	2013-03-31 23:39:00	Organic Search	23.0	60.0	5.0	5.0	Sunday
+24083	24084	Miss	1975-03-12	Clonmel	Y	2013-03-31 23:52:00	Organic Search	21.0	45.0	6.0	26.0	Sunday
+91 rows × 12 columns
+
+Day on which most orders were placed
+cleaned_df['DayName'].value_counts()
+Friday       4846
+Thursday     4714
+Sunday       4544
+Saturday     4344
+Monday       4221
+Tuesday      4050
+Wednesday    3872
+Name: DayName, dtype: int64
+location_counts = cleaned_df['DayName'].value_counts()
+plt.figure(figsize=(8, 6))
+location_counts.plot(kind='bar', color='green')
+plt.xlabel('Source')
+plt.ylabel('Frequency')
+plt.title('Day Name')
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
+
+cleaned_df['Profit'] = cleaned_df['1st Order Profit'] + cleaned_df['Subsequent Order Profit']
+cleaned_df['Net Profit'] = cleaned_df['Profit'] - cleaned_df['Total value of all promotions']
+cleaned_df
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName	Profit	Net Profit
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	9.0	5.0	1.0	7.0	Tuesday	14.0	7.0
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	8.0	70.0	7.0	7.0	Tuesday	78.0	71.0
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.0	51.0	7.0	0.0	Tuesday	65.0	65.0
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.0	0.0	0.0	0.0	Tuesday	14.0	14.0
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	23.0	68.0	9.0	15.0	Tuesday	91.0	76.0
+...	...	...	...	...	...	...	...	...	...	...	...	...	...	...
+31436	31437	Mr	1964-12-19	Dublin	N	2013-03-15 17:28:00	Affiliates	11.0	97.0	9.0	28.0	Friday	108.0	80.0
+31437	31438	Mr	1977-09-23	Mullingar	Y	2013-03-15 17:28:00	Paid Search	21.0	70.0	10.0	9.0	Friday	91.0	82.0
+31438	31439	Mr	1988-07-02	Dublin	Y	2013-03-15 17:28:00	Paid Social	7.0	42.0	4.0	0.0	Friday	49.0	49.0
+31439	31440	Miss	1993-02-10	Dublin	Y	2013-03-15 17:29:00	Direct	9.0	0.0	0.0	3.0	Friday	9.0	6.0
+31440	31441	Mr	1971-12-18	Letterkenny	Y	2013-03-15 17:30:00	Direct	3.0	69.0	6.0	9.0	Friday	72.0	63.0
+30591 rows × 14 columns
+
+cleaned_df['Net Profit'] = cleaned_df['1st Order Profit'] + cleaned_df['Subsequent Order Profit'] - cleaned_df['Total value of all promotions']
+Number of customers acquired by each source
+
+cleaned_df['Source of Customer'].value_counts()
+Direct            10941
+Organic Search     8164
+Paid Search        6354
+Affiliates         3756
+Paid Social        1376
+Name: Source of Customer, dtype: int64
+g = cleaned_df.groupby('Source of Customer')['Net Profit'].sum().reset_index()
+Net Profit for Each Source of Customer in Each Month
+We can see that the cost spent on acquiring the customer through affiliates is significantly more than the profit earned from them.
+
+cleaned_df['Registration Date'] = pd.to_datetime(cleaned_df['Registration Date'], format='%d/%m/%y')
+cleaned_df['Month'] = cleaned_df['Registration Date'].dt.month
+source_monthly_profit = cleaned_df.groupby(['Source of Customer', 'Month'])['Net Profit'].sum()
+print("Net Profit for Each Source of Customer in Each Month:")
+print(source_monthly_profit)
+Net Profit for Each Source of Customer in Each Month:
+Source of Customer  Month
+Affiliates          1         22441.0
+                    2         21582.0
+                    3         69518.0
+Direct              1        103168.0
+                    2        145214.0
+                    3        216567.0
+Organic Search      1         65923.0
+                    2         84344.0
+                    3        203053.0
+Paid Search         1         57744.0
+                    2        110887.0
+                    3         97558.0
+Paid Social         1         11565.0
+                    2         12948.0
+                    3         51671.0
+Name: Net Profit, dtype: float64
+cleaned_df_1 = cleaned_df
+cleaned_df_1['age'] = 2013 - cleaned_df['Date Of Birth'].dt.year
+cleaned_df.head()
+Customer ID	Title	Date Of Birth	Address City	Contact Allowed	Registration Date	Source of Customer	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName	Profit	Net Profit	Month	age
+0	1	Mr	1973-06-29	Malahide	Y	2013-01-01 00:23:00	Organic Search	9.0	5.0	1.0	7.0	Tuesday	14.0	7.0	1	40
+1	2	Mr	1984-07-25	Dublin	Y	2013-01-01 00:30:00	Affiliates	8.0	70.0	7.0	7.0	Tuesday	78.0	71.0	1	29
+2	3	Mr	1991-05-01	Dublin	Y	2013-01-01 01:09:00	Paid Social	14.0	51.0	7.0	0.0	Tuesday	65.0	65.0	1	22
+3	4	Mr	1986-11-30	Dublin	N	2013-01-01 01:19:00	Affiliates	14.0	0.0	0.0	0.0	Tuesday	14.0	14.0	1	27
+4	5	Mr	1991-10-02	Limerick	Y	2013-01-01 01:58:00	Paid Search	23.0	68.0	9.0	15.0	Tuesday	91.0	76.0	1	22
+cleaned_df = pd.get_dummies(cleaned_df, columns= ['Title', 'Source of Customer'], dtype='int')
+cleaned_df.head()
+Customer ID	Date Of Birth	Address City	Contact Allowed	Registration Date	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	DayName	...	age	Title_Miss	Title_Mr	Title_Mrs	Title_Ms	Source of Customer_Affiliates	Source of Customer_Direct	Source of Customer_Organic Search	Source of Customer_Paid Search	Source of Customer_Paid Social
+0	1	1973-06-29	Malahide	Y	2013-01-01 00:23:00	9.0	5.0	1.0	7.0	Tuesday	...	40	0	1	0	0	0	0	1	0	0
+1	2	1984-07-25	Dublin	Y	2013-01-01 00:30:00	8.0	70.0	7.0	7.0	Tuesday	...	29	0	1	0	0	1	0	0	0	0
+2	3	1991-05-01	Dublin	Y	2013-01-01 01:09:00	14.0	51.0	7.0	0.0	Tuesday	...	22	0	1	0	0	0	0	0	0	1
+3	4	1986-11-30	Dublin	N	2013-01-01 01:19:00	14.0	0.0	0.0	0.0	Tuesday	...	27	0	1	0	0	1	0	0	0	0
+4	5	1991-10-02	Limerick	Y	2013-01-01 01:58:00	23.0	68.0	9.0	15.0	Tuesday	...	22	0	1	0	0	0	0	0	1	0
+5 rows × 23 columns
+
+cleaned_df.columns
+Index(['Customer ID', 'Date Of Birth', 'Address City', 'Contact Allowed',
+       'Registration Date', '1st Order Profit', 'Subsequent Order Profit',
+       'Subsequent Orders Count', 'Total value of all promotions', 'DayName',
+       'Profit', 'Net Profit', 'Month', 'age', 'Title_Miss', 'Title_Mr',
+       'Title_Mrs', 'Title_Ms', 'Source of Customer_Affiliates',
+       'Source of Customer_Direct', 'Source of Customer_Organic Search',
+       'Source of Customer_Paid Search', 'Source of Customer_Paid Social'],
+      dtype='object')
+MACHINE LEARNING
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+#features = ['1st Order Profit', 'Subsequent Order Profit', 'Subsequent Orders Count','Net Profit', 'Total value of all promotions']
+features = ['Title_Miss', 'Title_Mr',
+       'Title_Mrs', 'Title_Ms', 'Source of Customer_Affiliates',
+       'Source of Customer_Direct', 'Source of Customer_Organic Search',
+       'Source of Customer_Paid Search', 'Source of Customer_Paid Social', 'age','Net Profit']
+segmentation_data = cleaned_df[features]
+num_clusters = 5
+kmeans = KMeans(n_clusters=num_clusters, random_state=42, init='k-means++')
+cleaned_df['Cluster'] = kmeans.fit_predict(segmentation_data)
+for cluster in range(num_clusters):
+    plt.scatter(cleaned_df[cleaned_df['Cluster'] == cluster]['Subsequent Orders Count'],
+               cleaned_df[cleaned_df['Cluster'] == cluster]['Net Profit'], label=f'Cluster {cluster}')
+plt.xlabel('Subsequent Orders Count')
+plt.ylabel('Net Profit')
+plt.legend()
+plt.show()
+print("Customer Distribution in Each Cluster:")
+print(cleaned_df['Cluster'].value_counts())
+
+Customer Distribution in Each Cluster:
+1    15038
+4     7879
+0     4762
+3     2288
+2      624
+Name: Cluster, dtype: int64
+sub_df=cleaned_df[['Title_Miss', 'Title_Mr',
+       'Title_Mrs', 'Title_Ms', 'Source of Customer_Affiliates',
+       'Source of Customer_Direct', 'Source of Customer_Organic Search',
+       'Source of Customer_Paid Search', 'Source of Customer_Paid Social', 'age','Net Profit','Cluster']]
+sub_df.head()
+Title_Miss	Title_Mr	Title_Mrs	Title_Ms	Source of Customer_Affiliates	Source of Customer_Direct	Source of Customer_Organic Search	Source of Customer_Paid Search	Source of Customer_Paid Social	age	Net Profit	Cluster
+0	0	1	0	0	0	0	1	0	0	40	7.0	1
+1	0	1	0	0	1	0	0	0	0	29	71.0	0
+2	0	1	0	0	0	0	0	0	1	22	65.0	0
+3	0	1	0	0	1	0	0	0	0	27	14.0	1
+4	0	1	0	0	0	0	0	1	0	22	76.0	0
+cleaned_df[cleaned_df['Cluster'] == 1].describe()
+Customer ID	1st Order Profit	Subsequent Order Profit	Subsequent Orders Count	Total value of all promotions	Profit	Net Profit	Month	age	Title_Miss	Title_Mr	Title_Mrs	Title_Ms	Source of Customer_Affiliates	Source of Customer_Direct	Source of Customer_Organic Search	Source of Customer_Paid Search	Source of Customer_Paid Social	Cluster
+count	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.000000	15038.0
+mean	15060.998670	9.417808	4.849116	0.874252	3.278694	14.266924	10.988230	2.157268	34.109257	0.099415	0.583788	0.081926	0.087578	0.144501	0.356297	0.258080	0.206809	0.034313	1.0
+std	9028.164981	6.109473	9.527441	1.802129	6.567673	10.339102	6.860919	0.820656	10.657670	0.299228	0.492946	0.274261	0.282690	0.351608	0.478920	0.437593	0.405031	0.182038	0.0
+min	1.000000	1.000000	0.000000	0.000000	0.000000	1.000000	-24.000000	1.000000	20.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	1.0
+25%	7019.500000	4.000000	0.000000	0.000000	0.000000	7.000000	5.000000	1.000000	26.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	1.0
+50%	14538.500000	8.000000	0.000000	0.000000	1.000000	13.000000	10.000000	2.000000	31.000000	0.000000	1.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	1.0
+75%	23287.750000	13.000000	7.000000	1.000000	4.000000	20.000000	16.000000	3.000000	39.000000	0.000000	1.000000	0.000000	0.000000	0.000000	1.000000	1.000000	0.000000	0.000000	1.0
+max	31440.000000	38.000000	130.000000	16.000000	145.000000	142.000000	25.000000	3.000000	97.000000	1.000000	1.000000	1.000000	1.000000	1.000000	1.000000	1.000000	1.000000	1.000000	1.0
+from sklearn.metrics import silhouette_score
+silhouette_avg = silhouette_score(sub_df,sub_df['Cluster'])
+print("Silhouette Score:", silhouette_avg)
+Silhouette Score: 0.44957147478704895
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+cluster_range = range(2, 11)
+silhouette_scores = []
+features = ['Title_Miss', 'Title_Mr',
+       'Title_Mrs', 'Title_Ms', 'Source of Customer_Affiliates',
+       'Source of Customer_Direct', 'Source of Customer_Organic Search',
+       'Source of Customer_Paid Search', 'Source of Customer_Paid Social', 'age','Net Profit']
+segmentation_data = cleaned_df[features]
+for n_clusters in cluster_range:
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    cluster_labels = kmeans.fit_predict(segmentation_data)
+    silhouette_avg = silhouette_score(segmentation_data, cluster_labels)
+    silhouette_scores.append(silhouette_avg)
+plt.figure(figsize=(8, 4))
+plt.plot(cluster_range, silhouette_scores, marker='o', linestyle='-')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Silhouette Score')
+plt.title('Silhouette Score for Different Numbers of Clusters')
+plt.grid(True)
+plt.show()
+
+Cluster analysis
+Cluster 2 indicates the people with age between 32 and 48. Direct and organic are 39% and 29% respectively. NP: 214 EUR with avg repeat order of 14
+
+Cluster 3 indicates age between 29 and 45 with gradual decrease in direct and organic searches i.e. people are more attracting towards the paid search or social. ~ 36 and 29%. NP: 127 EUR and avg order count of 10
+
+Cluster 0 represents the group of people with age between 27 and 42, ~36% and 27%, NP: 77 EUR and avg order count of ~ 8
+
+Cluster 4 represents the group of people with age between 27 and 40, ~34% and 27%, NP: 40 EUR and avg order count of ~ 5
+
+Cluster 1 represents the group of people with age between 26 and 39, ~35% and 25%, NP: 11 EUR and avg order count of ~ 8
+
+Cluster 1 had the highest registration but they weren't able to retain the customers
+
+March seems to be the most profitable month across the given timeline.
+
+Insights
+Affiliate marketing is currently unprofitable, so we should focus on improving our affiliate program or discontinuing it.
+Cluster 0 is our most profitable customer segment, so we should focus on increasing sales and engagement within this group.
+Cluster 1 is our least profitable customer segment, so we should consider offering more promotions or targeting them with more relevant marketing messages.
